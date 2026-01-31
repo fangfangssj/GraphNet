@@ -1,4 +1,5 @@
 import torch
+import torch_musa
 from .graph_compiler_backend import GraphCompilerBackend
 
 
@@ -10,5 +11,5 @@ class NopeBackend(GraphCompilerBackend):
         return model
 
     def synchronize(self):
-        if torch.cuda.is_available():
-            torch.cuda.synchronize()
+        if torch.musa.is_available():
+            torch.musa.synchronize()

@@ -2,6 +2,7 @@ from . import utils
 import argparse
 import importlib.util
 import torch
+import torch_musa
 from pathlib import Path
 from typing import Type
 import sys
@@ -30,15 +31,15 @@ def set_seed(random_seed):
     random.seed(random_seed)
     np.random.seed(random_seed)
     torch.manual_seed(random_seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(random_seed)
-        torch.cuda.manual_seed_all(random_seed)
+    if torch.musa.is_available():
+        torch.musa.manual_seed(random_seed)
+        torch.musa.manual_seed_all(random_seed)
 
 
 def get_hardward_name(device):
     hardware_name = "unknown"
-    if "cuda" in device:
-        hardware_name = torch.cuda.get_device_name(device)
+    if "musa" in device:
+        hardware_name = torch.musa.get_device_name(device)
     elif device == "cpu":
         hardware_name = platform.processor()
     return hardware_name
@@ -109,7 +110,7 @@ def get_compiler_backend(args) -> GraphCompilerBackend:
 def get_model(args):
     device = "xla" if args.compiler == "xla" else args.device
 
-    # device: Torch device object specifying the target device for model loading (e.g., 'cuda', 'cpu', 'xla')
+    # device: Torch device object specifying the target device for model loading (e.g., 'musa', 'cpu', 'xla')
     model_class = load_class_from_file(
         args.model_path, class_name="GraphModule", device=device
     )
@@ -144,8 +145,8 @@ def measure_performance(model_call, args, compiler):
         flush=True,
     )
 
-    if "cuda" in args.device:
-        torch.cuda.empty_cache()
+    if "musa" in args.device:
+        torch.musa.empty_cache()
         e2e_times = []
         gpu_times = []
 
@@ -153,9 +154,9 @@ def measure_performance(model_call, args, compiler):
             # End-to-end timing (naive_timer)
             duration_box = test_compiler_util.DurationBox(-1)
             with test_compiler_util.naive_timer(duration_box, compiler.synchronize):
-                # GPU-only timing (CUDA Events)
-                start_event = torch.cuda.Event(enable_timing=True)
-                end_event = torch.cuda.Event(enable_timing=True)
+                # GPU-only timing (musa Events)
+                start_event = torch.musa.Event(enable_timing=True)
+                end_event = torch.musa.Event(enable_timing=True)
                 start_event.record()
 
                 model_call()
@@ -254,7 +255,7 @@ def check_and_complete_args(args):
         "output_path": None,  # Log and output directory
         "seed": 123,  # Random seed
         "compiler": "inductor",  # Compiler name
-        "device": "cuda",  # Device for testing the compiler (e.g., 'cpu' or 'cuda')
+        "device": "musa",  # Device for testing the compiler (e.g., 'cpu' or 'musa')
         "op_lib": None,  # Operator library
         "warmup": 3,  # Number of warmup steps
         "trials": 5,  # Number of timing trials

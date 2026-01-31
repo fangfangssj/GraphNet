@@ -4,6 +4,7 @@ import sys
 import types
 
 import torch
+import torch_musa
 from graph_net_bench import path_utils
 from graph_net_bench import test_compiler_util
 from graph_net import model_path_util
@@ -65,7 +66,8 @@ def test_single_model(args):
     eval_backend_perf.eval_single_model_with_single_backend(eval_args)
 
     ref_dump = utils.get_output_path(args.reference_dir, args.model_path)
-    ref_out = torch.load(str(ref_dump))
+    # ref_out = torch.load(str(ref_dump))
+    ref_out = torch.load(str(ref_dump), map_location=torch.device('musa'))
     ref_log = utils.get_log_path(args.reference_dir, args.model_path)
     ref_time_stats = eval_backend_diff.parse_time_stats_from_reference_log(ref_log)
 
@@ -131,7 +133,7 @@ def test_multi_models(args):
 
 def main(args):
     assert os.path.isdir(args.model_path)
-    assert args.device in ["cuda", "dcu", "xpu", "cpu"]
+    assert args.device in ["musa","cuda", "dcu", "xpu", "cpu"]
 
     if path_utils.is_single_model_dir(args.model_path):
         if args.op_lib == "origin":

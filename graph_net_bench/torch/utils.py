@@ -1,4 +1,5 @@
 import torch
+import torch_musa
 import os
 import ast
 import math

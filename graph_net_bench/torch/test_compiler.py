@@ -3,6 +3,7 @@ import subprocess
 import argparse
 import importlib.util
 import torch
+import torch_musa
 from pathlib import Path
 from typing import Type
 import sys
@@ -53,15 +54,15 @@ def set_seed(random_seed):
     random.seed(random_seed)
     np.random.seed(random_seed)
     torch.manual_seed(random_seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(random_seed)
-        torch.cuda.manual_seed_all(random_seed)
+    if torch.musa.is_available():
+        torch.musa.manual_seed(random_seed)
+        torch.musa.manual_seed_all(random_seed)
 
 
 def get_hardward_name(args):
     hardware_name = "unknown"
-    if "cuda" in args.device:
-        hardware_name = torch.cuda.get_device_name(args.device)
+    if "musa" in args.device:
+        hardware_name = torch.musa.get_device_name(args.device)
     elif args.device == "cpu":
         hardware_name = platform.processor()
     return hardware_name
@@ -119,7 +120,7 @@ def get_compiler_backend(args) -> GraphCompilerBackend:
 def get_model(args):
     device = "xla" if args.compiler == "xla" else args.device
 
-    # device: Torch device object specifying the target device for model loading (e.g., 'cuda', 'cpu', 'xla')
+    # device: Torch device object specifying the target device for model loading (e.g., 'musa', 'cpu', 'xla')
     model_class = load_class_from_file(args, class_name="GraphModule", device=device)
     model = model_class().to(torch.device(args.device))
     return model
@@ -153,10 +154,10 @@ def measure_performance(model_call, args, compiler):
         flush=True,
     )
 
-    if "cuda" in args.device:
+    if "musa" in args.device:
         """
         Acknowledgement: We evaluate the performance on both end-to-end and GPU-only timings,
-        With reference to methods only based on CUDA events from KernelBench in https://github.com/ScalingIntelligence/KernelBench
+        With reference to methods only based on musa events from KernelBench in https://github.com/ScalingIntelligence/KernelBench
         """
 
         e2e_times = []
@@ -166,9 +167,9 @@ def measure_performance(model_call, args, compiler):
             # End-to-end timing (naive_timer)
             duration_box = test_compiler_util.DurationBox(-1)
             with test_compiler_util.naive_timer(duration_box, compiler.synchronize):
-                # GPU-only timing (CUDA Events)
-                start_event = torch.cuda.Event(enable_timing=True)
-                end_event = torch.cuda.Event(enable_timing=True)
+                # GPU-only timing (musa Events)
+                start_event = torch.musa.Event(enable_timing=True)
+                end_event = torch.musa.Event(enable_timing=True)
                 start_event.record()
 
                 model_call()
@@ -256,7 +257,7 @@ def test_single_model(args):
         if not isinstance(compiled_out, tuple):
             compiled_out = (compiled_out,)
         if args.compiler == "xla":
-            compiled_out = tuple(item.to("cpu").to("cuda") for item in compiled_out)
+            compiled_out = tuple(item.to("cpu").to("musa") for item in compiled_out)
     except (TypeError, RuntimeError) as e:
         print(f"Compiled model execution failed: {str(e)}", file=sys.stderr)
         compiled_failure = True
@@ -515,8 +516,8 @@ if __name__ == "__main__":
         "--device",
         type=str,
         required=False,
-        default="cuda",
-        help="Device for testing the compiler (e.g., 'cpu' or 'cuda')",
+        default="musa",
+        help="Device for testing the compiler (e.g., 'cpu' or 'musa')",
     )
     parser.add_argument(
         "--warmup", type=int, required=False, default=3, help="Number of warmup steps"

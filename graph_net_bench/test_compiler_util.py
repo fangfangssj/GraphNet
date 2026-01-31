@@ -27,7 +27,7 @@ def naive_timer(duration_box, synchronizer_func):
 
 
 def is_gpu_device(device):
-    return "cuda" in device or "dcu" in device
+    return "musa" in device or "dcu" in device
 
 
 def get_device_utilization(device_id, device_count, synchronizer_func):

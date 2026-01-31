@@ -1,6 +1,7 @@
 from . import utils
 import argparse
 import torch
+import torch_musa
 import sys
 import os
 import os.path
