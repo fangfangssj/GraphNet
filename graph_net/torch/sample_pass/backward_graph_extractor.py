@@ -28,6 +28,10 @@ class BackwardGraphExtractor:
         )
         module.train()
 
+        original_name_dir = os.path.join(self.output_dir, self.model_name)
+        if not os.path.exists(original_name_dir):
+            shutil.copytree(self.model_path, original_name_dir)
+
         forward_inputs = self.set_requires_grad_for_forward_inputs(
             self.model_path, module, forward_inputs
         )
