@@ -145,6 +145,13 @@ def measure_performance(model_call, args, compiler):
     stats = {}
     outs = model_call()
 
+    # Clone outputs immediately to avoid CUDAGraphs overwriting the returned
+    # tensors during subsequent warmup/trial runs.
+    if isinstance(outs, torch.Tensor):
+        outs = outs.clone()
+    elif isinstance(outs, tuple):
+        outs = tuple(o.clone() if isinstance(o, torch.Tensor) else o for o in outs)
+
     # Warmup runs
     for _ in range(args.warmup):
         model_call()
